@@ -59,7 +59,7 @@
 
             // ดึงข้อมูลผู้ใช้จาก localStorage (ใช้ข้อมูลเดียวกับหน้าหลัก)
             const users = JSON.parse(localStorage.getItem('users')) || [
-                { id: 1, username: 'admin', password: 'admin8888', role: 'admin' }
+                { id: 1, username: 'admin', password: '1', role: 'admin' }
             ];
 
             const adminUser = users.find(u => u.username === username && u.password === password && u.role === 'admin');
