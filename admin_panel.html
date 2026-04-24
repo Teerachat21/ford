@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - บันทึกรายรับรายจ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Kanit', sans-serif; }</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <nav class="bg-slate-900 text-white p-4 shadow-xl">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-slate-700 rounded flex items-center justify-center font-bold text-slate-300">A</div>
+                <h1 class="text-xl font-bold tracking-tight">ADMIN PANEL</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <span class="text-slate-400 text-sm">ผู้ดูแลระบบ: <strong id="admin-display-name" class="text-white"></strong></span>
+                <button onclick="adminLogout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition shadow-md">ออกจากระบบ</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto py-10 px-4">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border-b-4 border-blue-500">
+                <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">ผู้ใช้ทั้งหมด</p>
+                <p id="admin-total-users" class="text-4xl font-bold text-slate-800 mt-2">0</p>
+            </div>
+            <div class="bg-white p-8 rounded-2xl shadow-sm border-b-4 border-emerald-500">
+                <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">รายรับรวมทั้งระบบ</p>
+                <p id="admin-total-income" class="text-4xl font-bold text-emerald-600 mt-2">฿0.00</p>
+            </div>
+            <div class="bg-white p-8 rounded-2xl shadow-sm border-b-4 border-rose-500">
+                <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">รายจ่ายรวมทั้งระบบ</p>
+                <p id="admin-total-expense" class="text-4xl font-bold text-rose-600 mt-2">฿0.00</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+            <div class="p-6 bg-slate-50 border-b border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800">จัดการรายชื่อผู้ใช้งาน</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-slate-500 text-xs font-bold uppercase tracking-wider bg-slate-50">
+                            <th class="p-4 border-b border-slate-200">ชื่อผู้ใช้</th>
+                            <th class="p-4 border-b border-slate-200 text-right">จำนวนรายการ</th>
+                            <th class="p-4 border-b border-slate-200 text-right text-emerald-600">รายรับ</th>
+                            <th class="p-4 border-b border-slate-200 text-right text-rose-600">รายจ่าย</th>
+                            <th class="p-4 border-b border-slate-200 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-user-table" class="divide-y divide-slate-100">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+        
+        // Security Check
+        if (!currentAdmin || currentAdmin.role !== 'admin') {
+            window.location.href = 'admin_login.html';
+        } else {
+            document.getElementById('admin-display-name').innerText = currentAdmin.username;
+        }
+
+        function adminLogout() {
+            localStorage.removeItem('currentAdmin');
+            window.location.href = 'admin_login.html';
+        }
+
+        function updateAdminPanel() {
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const allTransactions = JSON.parse(localStorage.getItem('allTransactions')) || [];
+            
+            const userList = users.filter(u => u.role !== 'admin');
+            document.getElementById('admin-total-users').innerText = userList.length;
+            
+            let totalIn = 0, totalEx = 0;
+            allTransactions.forEach(t => {
+                if (t.type === 'income') totalIn += parseFloat(t.amount);
+                else totalEx += parseFloat(t.amount);
+            });
+
+            document.getElementById('admin-total-income').innerText = `฿${totalIn.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            document.getElementById('admin-total-expense').innerText = `฿${totalEx.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+            const tableBody = document.getElementById('admin-user-table');
+            tableBody.innerHTML = '';
+            
+            userList.forEach(u => {
+                const uTrans = allTransactions.filter(t => t.userId === u.id);
+                let uIn = 0, uEx = 0;
+                uTrans.forEach(t => {
+                    if (t.type === 'income') uIn += parseFloat(t.amount);
+                    else uEx += parseFloat(t.amount);
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition duration-150';
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-slate-700">${u.username}</td>
+                    <td class="p-4 text-right text-slate-500">${uTrans.length} รายการ</td>
+                    <td class="p-4 text-right text-emerald-600 font-medium">฿${uIn.toLocaleString()}</td>
+                    <td class="p-4 text-right text-rose-600 font-medium">฿${uEx.toLocaleString()}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteUser(${u.id})" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white px-3 py-1 rounded transition text-sm font-medium">ลบผู้ใช้</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            if (userList.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400">ยังไม่มีผู้ใช้งานในระบบ</td></tr>';
+            }
+        }
+
+        window.deleteUser = function(userId) {
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้และข้อมูลธุรกรรมทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+                let users = JSON.parse(localStorage.getItem('users')) || [];
+                let allTransactions = JSON.parse(localStorage.getItem('allTransactions')) || [];
+                
+                users = users.filter(u => u.id !== userId);
+                allTransactions = allTransactions.filter(t => t.userId !== userId);
+                
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
+                updateAdminPanel();
+            }
+        };
+
+        // Initialize
+        updateAdminPanel();
+    </script>
+</body>
+</html>
