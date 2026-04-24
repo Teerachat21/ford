@@ -41,8 +41,14 @@
 
         // ตรวจสอบและสร้าง Admin เริ่มต้นในเครื่องที่ใช้งาน
         let users = JSON.parse(localStorage.getItem('users')) || [];
-        if (!users.find(u => u.username === 'admin')) {
+        let adminUser = users.find(u => u.username === 'admin');
+        
+        if (!adminUser) {
             users.push({ id: 1, username: 'admin', password: 'admin8888', role: 'admin' });
+            localStorage.setItem('users', JSON.stringify(users));
+        } else if (adminUser.password === 'admin1234') {
+            // อัปเดตรหัสผ่านถ้ายังเป็นอันเก่า
+            adminUser.password = 'admin8888';
             localStorage.setItem('users', JSON.stringify(users));
         }
 
