@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>บันทึกรายรับ-รายจ่าย (Full Version)</title>
+    <title>บันทึกรายรับ-รายจ่าย (Admin Version)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
@@ -39,7 +39,51 @@
         </div>
     </div>
 
-    <!-- Main Content Section -->
+    <!-- Admin Dashboard Section -->
+    <div id="admin-content" class="hidden max-w-4xl mx-auto py-10 px-4">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Admin Dashboard</h1>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-600">Admin: <strong id="admin-name"></strong></span>
+                <button onclick="logout()" class="text-xs bg-red-100 text-red-600 px-3 py-1 rounded-md hover:bg-red-200 transition">ออกจากระบบ</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm">ผู้ใช้ทั้งหมด</p>
+                <p id="admin-total-users" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm">รายรับรวมทั้งระบบ</p>
+                <p id="admin-total-income" class="text-2xl font-bold text-green-600">฿0.00</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                <p class="text-gray-500 text-sm">รายจ่ายรวมทั้งระบบ</p>
+                <p id="admin-total-expense" class="text-2xl font-bold text-red-600">฿0.00</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <h2 class="text-xl font-semibold p-6 border-b">รายชื่อผู้ใช้งานและธุรกรรม</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr class="text-gray-500 text-sm">
+                            <th class="p-4 font-medium">ชื่อผู้ใช้</th>
+                            <th class="p-4 font-medium text-right">จำนวนรายการ</th>
+                            <th class="p-4 font-medium text-right">ยอดรวมรายรับ</th>
+                            <th class="p-4 font-medium text-right">ยอดรวมรายจ่าย</th>
+                            <th class="p-4 font-medium text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-user-table" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Section (Main Content) -->
     <div id="main-content" class="hidden max-w-2xl mx-auto py-10 px-4">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-gray-800">บันทึกรายรับ-รายจ่าย</h1>
@@ -122,13 +166,16 @@
     <script>
         // State Management
         let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
-        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let users = JSON.parse(localStorage.getItem('users')) || [
+            { id: 1, username: 'admin', password: 'admin1234', role: 'admin' }
+        ];
         let allTransactions = JSON.parse(localStorage.getItem('allTransactions')) || [];
         let isLoginView = true;
 
         // Elements
         const authSection = document.getElementById('auth-section');
         const mainContent = document.getElementById('main-content');
+        const adminContent = document.getElementById('admin-content');
         const authForm = document.getElementById('auth-form');
         const authTitle = document.getElementById('auth-title');
         const authBtn = document.getElementById('auth-btn');
@@ -137,6 +184,7 @@
         const authError = document.getElementById('auth-error');
         const authSuccess = document.getElementById('auth-success');
         const displayName = document.getElementById('display-name');
+        const adminName = document.getElementById('admin-name');
 
         const transactionForm = document.getElementById('transaction-form');
         const transactionList = document.getElementById('transaction-list');
@@ -144,6 +192,17 @@
         const totalIncome = document.getElementById('total-income');
         const totalExpense = document.getElementById('total-expense');
         const monthlySummaryBody = document.getElementById('monthly-summary-body');
+
+        // Admin Elements
+        const adminTotalUsers = document.getElementById('admin-total-users');
+        const adminTotalIncome = document.getElementById('admin-total-income');
+        const adminTotalExpense = document.getElementById('admin-total-expense');
+        const adminUserTable = document.getElementById('admin-user-table');
+
+        // Initial check for default admin
+        if (!localStorage.getItem('users')) {
+            localStorage.setItem('users', JSON.stringify(users));
+        }
 
         // Authentication Logic
         authToggleBtn.addEventListener('click', (e) => {
@@ -173,7 +232,7 @@
                 if (users.find(u => u.username === username)) {
                     showError('ชื่อผู้ใช้นี้มีอยู่ในระบบแล้ว');
                 } else {
-                    const newUser = { id: Date.now(), username, password };
+                    const newUser = { id: Date.now(), username, password, role: 'user' };
                     users.push(newUser);
                     localStorage.setItem('users', JSON.stringify(users));
                     showSuccess('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
@@ -186,9 +245,18 @@
             currentUser = user;
             localStorage.setItem('currentUser', JSON.stringify(user));
             authSection.classList.add('hidden');
-            mainContent.classList.remove('hidden');
-            displayName.innerText = user.username;
-            updateUI();
+            
+            if (user.role === 'admin') {
+                adminContent.classList.remove('hidden');
+                mainContent.classList.add('hidden');
+                adminName.innerText = user.username;
+                updateAdminUI();
+            } else {
+                mainContent.classList.remove('hidden');
+                adminContent.classList.add('hidden');
+                displayName.innerText = user.username;
+                updateUI();
+            }
         }
 
         function logout() {
@@ -196,6 +264,7 @@
             localStorage.removeItem('currentUser');
             authSection.classList.remove('hidden');
             mainContent.classList.add('hidden');
+            adminContent.classList.add('hidden');
             authForm.reset();
         }
 
@@ -211,7 +280,55 @@
             authError.classList.add('hidden');
         }
 
-        // Transaction Logic
+        // Admin UI Update
+        function updateAdminUI() {
+            const userList = users.filter(u => u.role !== 'admin');
+            adminTotalUsers.innerText = userList.length;
+            
+            let totalIn = 0, totalEx = 0;
+            allTransactions.forEach(t => {
+                if (t.type === 'income') totalIn += parseFloat(t.amount);
+                else totalEx += parseFloat(t.amount);
+            });
+
+            adminTotalIncome.innerText = `฿${totalIn.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            adminTotalExpense.innerText = `฿${totalEx.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+            adminUserTable.innerHTML = '';
+            userList.forEach(u => {
+                const uTrans = allTransactions.filter(t => t.userId === u.id);
+                let uIn = 0, uEx = 0;
+                uTrans.forEach(t => {
+                    if (t.type === 'income') uIn += parseFloat(t.amount);
+                    else uEx += parseFloat(t.amount);
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="p-4 font-medium">${u.username}</td>
+                    <td class="p-4 text-right">${uTrans.length} รายการ</td>
+                    <td class="p-4 text-right text-green-600">฿${uIn.toLocaleString()}</td>
+                    <td class="p-4 text-right text-red-600">฿${uEx.toLocaleString()}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteUser(${u.id})" class="text-red-500 hover:text-red-700 text-sm">ลบผู้ใช้</button>
+                    </td>
+                `;
+                adminUserTable.appendChild(tr);
+            });
+        }
+
+        window.deleteUser = function(userId) {
+            if (confirm('ยืนยันการลบผู้ใช้และข้อมูลทั้งหมด?')) {
+                users = users.filter(u => u.id !== userId);
+                allTransactions = allTransactions.filter(t => t.userId !== userId);
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('allTransactions', JSON.stringify(allTransactions));
+                updateAdminUI();
+            }
+        };
+
+        // User UI Update
         function updateUI() {
             if (!currentUser) return;
 
