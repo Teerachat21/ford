@@ -16,6 +16,7 @@
                 <h1 class="text-xl font-bold tracking-tight">ADMIN PANEL</h1>
             </div>
             <div class="flex items-center space-x-6">
+                <a href="index.html" class="text-slate-400 hover:text-white text-sm transition">หน้าหลักผู้ใช้</a>
                 <span class="text-slate-400 text-sm">ผู้ดูแลระบบ: <strong id="admin-display-name" class="text-white"></strong></span>
                 <button onclick="adminLogout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition shadow-md">ออกจากระบบ</button>
             </div>
@@ -39,7 +40,7 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200 mb-10">
             <div class="p-6 bg-slate-50 border-b border-slate-200">
                 <h2 class="text-xl font-bold text-slate-800">จัดการรายชื่อผู้ใช้งาน</h2>
             </div>
@@ -60,10 +61,41 @@
                 </table>
             </div>
         </div>
+
+        <!-- System Log: Detailed Transactions -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+            <div class="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-800">ประวัติรายการทั้งหมดในระบบ</h2>
+                <span class="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded">Admin View</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-slate-500 text-xs font-bold uppercase tracking-wider bg-slate-50">
+                            <th class="p-4 border-b border-slate-200">วันที่/เวลา</th>
+                            <th class="p-4 border-b border-slate-200">ผู้ใช้งาน</th>
+                            <th class="p-4 border-b border-slate-200">รายการ</th>
+                            <th class="p-4 border-b border-slate-200 text-right">จำนวนเงิน</th>
+                            <th class="p-4 border-b border-slate-200 text-center">ประเภท</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-system-log" class="divide-y divide-slate-100">
+                        <!-- Detailed transactions will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
-        const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+        // เช็คทั้ง currentAdmin และ currentUser เพื่อความชัวร์
+        let currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        
+        if (!currentAdmin && currentUser && currentUser.role === 'admin') {
+            currentAdmin = currentUser;
+            localStorage.setItem('currentAdmin', JSON.stringify(currentAdmin));
+        }
         
         // Security Check
         if (!currentAdmin || currentAdmin.role !== 'admin') {
@@ -74,6 +106,7 @@
 
         function adminLogout() {
             localStorage.removeItem('currentAdmin');
+            localStorage.removeItem('currentUser'); // ล้างทั้งคู่เพื่อความปลอดภัย
             window.location.href = 'admin_login.html';
         }
 
@@ -120,6 +153,40 @@
 
             if (userList.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400">ยังไม่มีผู้ใช้งานในระบบ</td></tr>';
+            }
+
+            // Update System Log (Detailed Transactions)
+            const logBody = document.getElementById('admin-system-log');
+            logBody.innerHTML = '';
+            
+            // Sort all transactions by date (newest first)
+            const sortedAll = [...allTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedAll.forEach(t => {
+                const user = users.find(u => u.id === t.userId);
+                const userName = user ? user.username : 'Unknown';
+                const date = new Date(t.date).toLocaleString('th-TH');
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition duration-150';
+                tr.innerHTML = `
+                    <td class="p-4 text-xs text-slate-500">${date}</td>
+                    <td class="p-4 font-medium text-slate-700">${userName}</td>
+                    <td class="p-4 text-slate-800">${t.title}</td>
+                    <td class="p-4 text-right font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">
+                        ${t.type === 'income' ? '+' : '-'}฿${parseFloat(t.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                            ${t.type === 'income' ? 'รายรับ' : 'รายจ่าย'}
+                        </span>
+                    </td>
+                `;
+                logBody.appendChild(tr);
+            });
+
+            if (sortedAll.length === 0) {
+                logBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400">ยังไม่มีข้อมูลรายการในระบบ</td></tr>';
             }
         }
 

@@ -201,11 +201,12 @@
         function login(user) {
             currentUser = user;
             localStorage.setItem('currentUser', JSON.stringify(user));
-            authSection.classList.add('hidden');
             
             if (user.role === 'admin') {
+                localStorage.setItem('currentAdmin', JSON.stringify(user));
                 window.location.href = 'admin_panel.html';
             } else {
+                authSection.classList.add('hidden');
                 mainContent.classList.remove('hidden');
                 displayName.innerText = user.username;
                 updateUI();
