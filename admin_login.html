@@ -39,6 +39,13 @@
         const loginForm = document.getElementById('admin-login-form');
         const errorMsg = document.getElementById('error-msg');
 
+        // ตรวจสอบและสร้าง Admin เริ่มต้นในเครื่องที่ใช้งาน
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        if (!users.find(u => u.username === 'admin')) {
+            users.push({ id: 1, username: 'admin', password: 'admin8888', role: 'admin' });
+            localStorage.setItem('users', JSON.stringify(users));
+        }
+
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value.trim();
